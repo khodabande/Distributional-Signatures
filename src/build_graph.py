@@ -280,10 +280,10 @@ if __name__ == '__main__':
     # all (+words)
     train_freq = freq_mat[:train_size]
     allx = (train_freq / train_freq.sum(1)) * word_mat
-    #ally = label_mat[label_ids[:train_size],:]
-    ally = label_mat[label_ids[:real_train_size],:]
+    ally = label_mat[label_ids[:train_size],:]
+    #ally = label_mat[label_ids[:real_train_size],:]
     allx = vstack([allx, word_mat])
-    ally = vstack([ally, sp.csr_matrix((val_size + len(vocab), len(label_list)))])
+    ally = vstack([ally, sp.csr_matrix((len(vocab), len(label_list)))])
 
     #print(x.shape, y.shape, tx.shape, ty.shape, allx.shape, ally.shape)
 
