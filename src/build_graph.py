@@ -14,7 +14,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.spatial.distance import cosine
 from scipy.sparse import eye, vstack, bmat, diags
 from main import parse_args, print_args, set_seed
-from dataset.loader import _load_json, _meta_split, _get_reuters_classes
+from dataset.loader import _load_json, _meta_split, _get_20newsgroup_classes, _get_amazon_classes, _get_fewrel_classes, _get_huffpost_classes, _get_reuters_classes, _get_rcv1_classes
 
 
 def load(args):
