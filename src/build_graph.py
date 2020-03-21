@@ -223,7 +223,7 @@ if __name__ == '__main__':
 
     set_seed(args.seed)
     
-    dataset = 'reuters'
+    dataset = args.dataset
 
     print('Reading data...')
     ids, names, docs, labels, train_size, val_size, test_size = load(args)
@@ -258,6 +258,7 @@ if __name__ == '__main__':
     freq_mat = freq_mat[:,filtered_word_ids]
     word_mat = word_mat[filtered_word_vec_ids,:]
     filtered_docs_wids = [[filtered_words_id_map[vocab[wid]] for wid in doc if vocab[wid] in filtered_words_id_map] for doc in docs_wids]
+    print([len(doc) for doc in docs_wids][0:10])
     print([len(doc) for doc in filtered_docs_wids][0:10])
             
 
@@ -313,17 +314,17 @@ if __name__ == '__main__':
 
 
     print('Adjacency matrix...')
-    print(freq_mat.shape)
+    #print(freq_mat.shape)
     app_mat = freq_mat.copy()
-    print(app_mat.shape)
+    #print(app_mat.shape)
     app_mat[app_mat > 0] = 1
-    print(app_mat.shape)
+    #print(app_mat.shape)
     word_freq_arr = np.asarray(app_mat.sum(0))[0]
-    print(word_freq_arr.shape)
+    #print(word_freq_arr.shape)
     idf_arr = np.log(float(len(docs)) / word_freq_arr)
-    print(idf_arr.shape)
+    #print(idf_arr.shape)
     tfidf_mat = get_tfidf(freq_mat, idf_arr)
-    print(tfidf_mat.shape)
+    #print(tfidf_mat.shape)
 
     node_size = train_size + len(vocab) + test_size
 
