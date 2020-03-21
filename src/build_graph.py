@@ -18,7 +18,24 @@ from dataset.loader import _load_json, _meta_split, _get_reuters_classes
 
 
 def load(args):
-    train_classes, val_classes, test_classes = _get_reuters_classes(args)
+    loader = None
+    if args.dataset == '20newsgroup':
+        loader = _get_20newsgroup_classes
+    elif args.dataset == 'amazon':
+        loader = _get_amazon_classes
+    elif args.dataset == 'fewrel':
+        loader = _get_fewrel_classes
+    elif args.dataset == 'huffpost':
+        loader = _get_huffpost_classes
+    elif args.dataset == 'reuters':
+        loader = _get_reuters_classes
+    elif args.dataset == 'rcv1':
+        loader = _get_rcv1_classes
+    else:
+        raise ValueError(
+            'args.dataset should be one of'
+            '[20newsgroup, amazon, fewrel, huffpost, reuters, rcv1]')
+    train_classes, val_classes, test_classes = loader(args)
     # load data
     all_data = _load_json(args.data_path)
     train_data, val_data, test_data = _meta_split(all_data, train_classes, val_classes, test_classes)
@@ -227,6 +244,10 @@ if __name__ == '__main__':
 
     print('Reading data...')
     ids, names, docs, labels, train_size, val_size, test_size = load(args)
+    print(sorted(list(set(labels[:train_size]))))
+    print(sorted(list(set(labels[train_size:train_size+val_size]))))
+    print(sorted(list(set(labels[train_size+val_size:]))))
+    
     train_size += val_size
 
     #write_list(ids[:train_size], 'data/fs.' + dataset + '.train.index')
