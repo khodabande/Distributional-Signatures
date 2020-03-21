@@ -266,21 +266,21 @@ def loadWord2Vec(filename):
     """Read Word Vectors"""
     vocab = []
     embd = []
-    word_vector_map = {}
+    word_vector_id_map = {}
     file = open(filename, 'r')
     for line in file.readlines():
         row = line.strip().split(' ')
         if(len(row) > 2):
-            vocab.append(row[0])
             vector = row[1:]
             length = len(vector)
             for i in range(length):
                 vector[i] = float(vector[i])
             embd.append(vector)
-            word_vector_map[row[0]] = vector
+            word_vector_id_map[row[0]] = len(vocab)
+            vocab.append(row[0])
     print('Loaded Word Vectors!')
     file.close()
-    return vocab, embd, word_vector_map
+    return vocab, embd, word_vector_id_map
 
 def clean_str(string):
     """

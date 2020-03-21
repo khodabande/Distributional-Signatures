@@ -138,58 +138,59 @@ def build_window_freqs(docs_wids, vocab_size, window_size=20):
 
 def load_or_build_embedding(ds, vocab):
     # One-hot embedding
-    embd = eye(len(vocab))
-    return embd
+    # embd = eye(len(vocab))
+    # return embd
+    
     # Read Word Vectors
     # word_vector_file = 'data/glove.6B/glove.6B.300d.txt'
     # word_vector_file = 'data/corpus/' + dataset + '_word_vectors.txt'
     #_, embd, word_vector_map = loadWord2Vec(word_vector_file)
     # word_embeddings_dim = len(embd[0])
-#     try:
-#         word_vector_file = 'data/corpus/' + ds + '_word_vectors.txt'
-#         _, embd, word_vector_map = loadWord2Vec(word_vector_file)
-#         word_embeddings_dim = len(embd[0])
+    try:
+        word_vector_file = 'data/corpus/' + ds + '_word_vectors.txt'
+        word_vec_vocab, embd, word_vec_id_map = loadWord2Vec(word_vector_file)
+        word_embeddings_dim = len(embd[0])
 
-#         # word embedding matrix
-#         wm = np.matrix(embd)
-#         return wm, word_vector_map
-#     except:
-#         print('Building embedding...')
-#         definitions = []
-#         for word in vocab:
-#             word = word.strip()
-#             synsets = wn.synsets(clean_str(word))
-#             word_defs = []
-#             for synset in synsets:
-#                 syn_def = synset.definition()
-#                 word_defs.append(syn_def)
-#             word_des = ' '.join(word_defs)
-#             if word_des == '':
-#                 word_des = '<PAD>'
-#             definitions.append(word_des)
+        # word embedding matrix
+        wm = np.matrix(embd)
+        return word_vec_vocab, wm, word_vec_id_map
+    except:
+        print('Building embedding...')
+        definitions = []
+        for word in vocab:
+            word = word.strip()
+            synsets = wn.synsets(clean_str(word))
+            word_defs = []
+            for synset in synsets:
+                syn_def = synset.definition()
+                word_defs.append(syn_def)
+            word_des = ' '.join(word_defs)
+            if word_des == '':
+                word_des = '<PAD>'
+            definitions.append(word_des)
 
-#         tfidf_vec = TfidfVectorizer(max_features=1000)
-#         tfidf_matrix = tfidf_vec.fit_transform(definitions)
-#         tfidf_matrix_array = tfidf_matrix.toarray()
+        tfidf_vec = TfidfVectorizer(max_features=1000)
+        tfidf_matrix = tfidf_vec.fit_transform(definitions)
+        tfidf_matrix_array = tfidf_matrix.toarray()
 
-#         word_vectors = []
+        word_vectors = []
 
-#         for i in range(len(vocab)):
-#             word = vocab[i]
-#             vector = tfidf_matrix_array[i]
-#             str_vector = []
-#             for j in range(len(vector)):
-#                 str_vector.append(str(vector[j]))
-#             temp = ' '.join(str_vector)
-#             word_vector = word + ' ' + temp
-#             word_vectors.append(word_vector)
+        for i in range(len(vocab)):
+            word = vocab[i]
+            vector = tfidf_matrix_array[i]
+            str_vector = []
+            for j in range(len(vector)):
+                str_vector.append(str(vector[j]))
+            temp = ' '.join(str_vector)
+            word_vector = word + ' ' + temp
+            word_vectors.append(word_vector)
 
-#         string = '\n'.join(word_vectors)
-#         f = open('data/corpus/' + ds + '_word_vectors.txt', 'w')
-#         f.write(string)
-#         f.close()
+        string = '\n'.join(word_vectors)
+        f = open('data/corpus/' + ds + '_word_vectors.txt', 'w')
+        f.write(string)
+        f.close()
         
-#         return load_or_build_embedding(ds, vocab)
+        return load_or_build_embedding(ds, vocab)
 
 
 def write_list(l, file):
@@ -246,11 +247,19 @@ if __name__ == '__main__':
     freq_mat = build_freq_matrix(docs_wids, word_id_map)
 
     print('Embedding...')
-    word_mat = load_or_build_embedding(dataset, vocab)
-    #cleaned_word_id_map = {clean_str(word):word_id for word,word_id in word_id_map.items()}
-    #filtered_word_ids = sorted(cleaned_word_id_map[word] for word in word_vec_map)
-    word_embeddings_dim = word_mat.shape[1]
-    #print(word_embeddings_dim)
+    word_vec_vocab, word_mat, word_vec_id_map = load_or_build_embedding(dataset, vocab)
+    filtered_words = sorted(list(set(word_vec_vocab).intersection(set(vocab))))
+    filtered_words_id_map = {}
+    for i, word in enumerate(filtered_words):
+        filtered_words_id_map[word] = i
+    print(len(filtered_words))
+    filtered_word_vec_ids = [word_vec_id_map[word] for word in filtered_words]
+    filtered_word_ids = [word_id_map[word] for word in filtered_words]
+    freq_mat = freq_mat[:,filtered_word_ids]
+    word_mat = word_mat[filtered_word_vec_ids,:]
+    filtered_docs_wids = [[filtered_words_id_map[vocab[wid]] for wid in doc if vocab[wid] in filtered_words_id_map] for doc in docs_wids]
+    print([len(doc) for doc in filtered_docs_wids][0:10])
+            
 
     print('Label IDs...')
     label_list, label_id_map = get_label_ids(labels)
@@ -268,22 +277,22 @@ if __name__ == '__main__':
     # train
     print('train')
     train_freq = freq_mat[:real_train_size]
-    # x = (train_freq / train_freq.sum(1)) * word_mat # for non one-hot embeddings
-    x = (train_freq / train_freq.sum(1))
+    x = (train_freq / train_freq.sum(1)) * word_mat # for non one-hot embeddings
+    # x = (train_freq / train_freq.sum(1)) # for one-hot embedding
     y = label_mat[label_ids[:real_train_size],:]
 
     # test
     print('test')
     test_freq = freq_mat[train_size:]
-    # tx = (test_freq / test_freq.sum(1)) * word_mat # for non one-hot embeddings
-    tx = (test_freq / test_freq.sum(1))
+    tx = (test_freq / test_freq.sum(1)) * word_mat # for non one-hot embeddings
+    # tx = (test_freq / test_freq.sum(1)) # for one-hot embedding
     ty = label_mat[label_ids[train_size:],:]
 
     # all (+words)
     print('all')
     train_freq = freq_mat[:train_size]
-    # allx = (train_freq / train_freq.sum(1)) * word_mat # for non one-hot embeddings
-    allx = (train_freq / train_freq.sum(1))
+    allx = (train_freq / train_freq.sum(1)) * word_mat # for non one-hot embeddings
+    # allx = (train_freq / train_freq.sum(1)) # for one-hot embedding
     ally = label_mat[label_ids[:train_size],:]
     #ally = label_mat[label_ids[:real_train_size],:]
     allx = vstack([allx, word_mat])
@@ -294,7 +303,8 @@ if __name__ == '__main__':
     print('PMIs...')
     #window_freq, num_windows = build_window_freq_matrix(docs_wids, len(vocab))
     #window_cofreq, num_windows = build_window_cofreq_matrix(docs_wids, len(vocab))
-    window_freq, window_cofreq, num_windows = build_window_freqs(docs_wids, len(vocab))
+    #window_freq, window_cofreq, num_windows = build_window_freqs(docs_wids, len(filtered_words))
+    window_freq, window_cofreq, num_windows = build_window_freqs(filtered_docs_wids, len(filtered_words))
 
     # pmi as weights
     pmi = window_cofreq.copy()
@@ -303,11 +313,17 @@ if __name__ == '__main__':
 
 
     print('Adjacency matrix...')
+    print(freq_mat.shape)
     app_mat = freq_mat.copy()
+    print(app_mat.shape)
     app_mat[app_mat > 0] = 1
+    print(app_mat.shape)
     word_freq_arr = np.asarray(app_mat.sum(0))[0]
+    print(word_freq_arr.shape)
     idf_arr = np.log(float(len(docs)) / word_freq_arr)
+    print(idf_arr.shape)
     tfidf_mat = get_tfidf(freq_mat, idf_arr)
+    print(tfidf_mat.shape)
 
     node_size = train_size + len(vocab) + test_size
 
