@@ -12,7 +12,7 @@ from sklearn import svm
 from nltk.corpus import wordnet as wn
 from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.spatial.distance import cosine
-from scipy.sparse import vstack, bmat, diags
+from scipy.sparse import eye, vstack, bmat, diags
 from main import parse_args, print_args, set_seed
 from dataset.loader import _load_json, _meta_split, _get_reuters_classes
 
@@ -137,63 +137,59 @@ def build_window_freqs(docs_wids, vocab_size, window_size=20):
 
 
 def load_or_build_embedding(ds, vocab):
+    # One-hot embedding
+    embd = eye(len(vocab))
+    return embd
     # Read Word Vectors
     # word_vector_file = 'data/glove.6B/glove.6B.300d.txt'
     # word_vector_file = 'data/corpus/' + dataset + '_word_vectors.txt'
     #_, embd, word_vector_map = loadWord2Vec(word_vector_file)
     # word_embeddings_dim = len(embd[0])
-    try:
-        word_vector_file = 'data/corpus/' + ds + '_word_vectors.txt'
-        _, embd, word_vector_map = loadWord2Vec(word_vector_file)
-        word_embeddings_dim = len(embd[0])
-        #print(word_embeddings_dim)
+#     try:
+#         word_vector_file = 'data/corpus/' + ds + '_word_vectors.txt'
+#         _, embd, word_vector_map = loadWord2Vec(word_vector_file)
+#         word_embeddings_dim = len(embd[0])
 
-        # word embedding matrix
-        wm = np.matrix(embd)
-        return wm
-    except:
-        print('Building embedding...')
-        definitions = []
-        for word in vocab:
-            word = word.strip()
-            synsets = wn.synsets(clean_str(word))
-            word_defs = []
-            for synset in synsets:
-                syn_def = synset.definition()
-                word_defs.append(syn_def)
-            word_des = ' '.join(word_defs)
-            if word_des == '':
-                word_des = '<PAD>'
-            definitions.append(word_des)
+#         # word embedding matrix
+#         wm = np.matrix(embd)
+#         return wm, word_vector_map
+#     except:
+#         print('Building embedding...')
+#         definitions = []
+#         for word in vocab:
+#             word = word.strip()
+#             synsets = wn.synsets(clean_str(word))
+#             word_defs = []
+#             for synset in synsets:
+#                 syn_def = synset.definition()
+#                 word_defs.append(syn_def)
+#             word_des = ' '.join(word_defs)
+#             if word_des == '':
+#                 word_des = '<PAD>'
+#             definitions.append(word_des)
 
-        #string = '\n'.join(definitions)
-        #f = open('data/corpus/' + dataset + '_vocab_def.txt', 'w')
-        #f.write(string)
-        #f.close()
+#         tfidf_vec = TfidfVectorizer(max_features=1000)
+#         tfidf_matrix = tfidf_vec.fit_transform(definitions)
+#         tfidf_matrix_array = tfidf_matrix.toarray()
 
-        tfidf_vec = TfidfVectorizer(max_features=1000)
-        tfidf_matrix = tfidf_vec.fit_transform(definitions)
-        tfidf_matrix_array = tfidf_matrix.toarray()
-        #print(tfidf_matrix_array[0], len(tfidf_matrix_array[0]))
+#         word_vectors = []
 
-        word_vectors = []
+#         for i in range(len(vocab)):
+#             word = vocab[i]
+#             vector = tfidf_matrix_array[i]
+#             str_vector = []
+#             for j in range(len(vector)):
+#                 str_vector.append(str(vector[j]))
+#             temp = ' '.join(str_vector)
+#             word_vector = word + ' ' + temp
+#             word_vectors.append(word_vector)
 
-        for i in range(len(vocab)):
-            word = vocab[i]
-            vector = tfidf_matrix_array[i]
-            str_vector = []
-            for j in range(len(vector)):
-                str_vector.append(str(vector[j]))
-            temp = ' '.join(str_vector)
-            word_vector = word + ' ' + temp
-            word_vectors.append(word_vector)
-
-        string = '\n'.join(word_vectors)
-        f = open('data/corpus/' + ds + '_word_vectors.txt', 'w')
-        f.write(string)
-        f.close()
+#         string = '\n'.join(word_vectors)
+#         f = open('data/corpus/' + ds + '_word_vectors.txt', 'w')
+#         f.write(string)
+#         f.close()
         
-        return load_or_build_embedding(ds, vocab)
+#         return load_or_build_embedding(ds, vocab)
 
 
 def write_list(l, file):
@@ -251,6 +247,8 @@ if __name__ == '__main__':
 
     print('Embedding...')
     word_mat = load_or_build_embedding(dataset, vocab)
+    #cleaned_word_id_map = {clean_str(word):word_id for word,word_id in word_id_map.items()}
+    #filtered_word_ids = sorted(cleaned_word_id_map[word] for word in word_vec_map)
     word_embeddings_dim = word_mat.shape[1]
     #print(word_embeddings_dim)
 
@@ -268,18 +266,24 @@ if __name__ == '__main__':
     #write_list(names[:real_train_size], 'data/fs.' + dataset + '.real_train.name')
 
     # train
+    print('train')
     train_freq = freq_mat[:real_train_size]
-    x = (train_freq / train_freq.sum(1)) * word_mat
+    # x = (train_freq / train_freq.sum(1)) * word_mat # for non one-hot embeddings
+    x = (train_freq / train_freq.sum(1))
     y = label_mat[label_ids[:real_train_size],:]
 
     # test
+    print('test')
     test_freq = freq_mat[train_size:]
-    tx = (test_freq / test_freq.sum(1)) * word_mat
+    # tx = (test_freq / test_freq.sum(1)) * word_mat # for non one-hot embeddings
+    tx = (test_freq / test_freq.sum(1))
     ty = label_mat[label_ids[train_size:],:]
 
     # all (+words)
+    print('all')
     train_freq = freq_mat[:train_size]
-    allx = (train_freq / train_freq.sum(1)) * word_mat
+    # allx = (train_freq / train_freq.sum(1)) * word_mat # for non one-hot embeddings
+    allx = (train_freq / train_freq.sum(1))
     ally = label_mat[label_ids[:train_size],:]
     #ally = label_mat[label_ids[:real_train_size],:]
     allx = vstack([allx, word_mat])
